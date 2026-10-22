@@ -61,5 +61,7 @@ the ERP reference application remains unchanged. See README.md for runnable inst
 
 Acceptance: run without tables, obtain a JWT, verify access and role restrictions, then follow
 the guide to connect real relational users. Report exact verification evidence in VERIFICATION.md.
-Publishing, pushing, and releasing are outside this task. Branding, license, and private reporting
-contact remain maintainer decisions before publication; do not invent them.
+The selected repository name is spring-security-jwt-auth-template and the code uses the MIT
+license, copyright 2026 Masum Hasan. Private security reporting uses GitHub after maintainer
+activation. Publishing, pushing, and releasing remain outside this task. Stateless v1 retains
+client-side token disposal rather than adding a revocation endpoint.

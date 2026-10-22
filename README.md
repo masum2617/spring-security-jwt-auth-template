@@ -1,4 +1,4 @@
-# Spring Boot JWT Security Foundation
+# spring-security-jwt-auth-template
 
 An editable REST authentication foundation: run the demo, understand the Spring Security flow,
 then replace its user lookup with your own database. This is source you own and customize,
@@ -9,7 +9,9 @@ not a library that requires your tables to follow a particular schema.
 - Email/password authentication through Spring's authentication provider.
 - RS256 access JWT generation and Spring's built-in Bearer-token validation.
 - Explicit security rules, configurable CORS, bcrypt password encoding, and Problem Details errors.
-- An opt-in, database-free demo with USER and ADMIN access examples.
+- Stateless request authentication: protected requests verify JWTs without a login-session store.
+- A keyless, database-free demo with USER and ADMIN access examples.
+- An importable Postman collection with 14 requests and 35 assertions.
 - A complete [relational database guide](docs/database-integration.md) and runnable JPA example.
 - Real-token HTTP tests, startup checks, and PostgreSQL integration tests.
 
@@ -59,6 +61,47 @@ Without `demo`, provide your own `UserDetailsService` and persistent RSA files a
 Missing/invalid key configuration fails startup; there is no automatic production fallback.
 Demo accounts and endpoints do not activate outside the profile.
 
+### Demo accounts and passwords
+
+| Email | Roles | Default local-demo password |
+| --- | --- | --- |
+| `user@example.com` | USER | `12345` |
+| `admin@example.com` | USER, ADMIN | `12345` |
+
+These public defaults exist only in the `demo` configuration. Override them with the environment
+variables shown above when choosing your own demo credentials. Both demo passwords must contain
+**5–72 UTF-8 bytes**, as enforced by `DemoProperties`; multibyte characters count as multiple bytes.
+The 5-byte minimum is a demo setting, not a recommended production account-password policy.
+The login request itself checks nonblank input and the bcrypt maximum of 72 UTF-8 bytes.
+
+### Run in IntelliJ IDEA
+
+1. Open the cloned/downloaded repository as a Maven project and let dependencies import.
+2. Set the project SDK and run configuration JRE to Java 17 or 21.
+3. Run `SecurityFoundationApplication` once to create its run configuration, then open
+   **Run → Edit Configurations** and select it.
+4. Set **Active profiles** to `demo`. If the field is unavailable, set **Program arguments** to
+   `--spring.profiles.active=demo`.
+5. Set the **Working directory** to the repository root (the directory containing `pom.xml`).
+6. In **Environment variables**, optionally set `DEMO_USER_PASSWORD` and `DEMO_ADMIN_PASSWORD`
+   to your own 5–72-byte values. Without overrides, the demo uses the defaults in the table.
+7. Apply and run. Look for the active `demo` profile and `Started SecurityFoundationApplication`.
+
+Environment variables exported in another Terminal do not automatically become IntelliJ run
+configuration values. No key-generation step is required with `demo`. If port 8080 is occupied,
+add `--server.port=8081` to Program arguments and update your Postman `baseUrl` accordingly.
+
+### API endpoints
+
+| Method | Path | Authentication | Purpose |
+| --- | --- | --- | --- |
+| POST | `/api/auth/login` | Email/password JSON | Issue an access JWT |
+| GET | `/api/demo/profile` | Valid Bearer JWT | Return the demo identity and authorities |
+| GET | `/api/demo/admin` | Valid Bearer JWT with ADMIN | Demonstrate role authorization |
+
+The two `/api/demo` routes exist only in the demo profile. Login stays available when a real
+`UserDetailsService` is supplied; database mode does not add generic business endpoints.
+
 ### Log in and use the access token
 
 In another terminal, set the same demo password variables. Capture the response without printing
@@ -104,9 +147,26 @@ curl -i http://localhost:8080/api/demo/admin \
 unset ACCESS_TOKEN ADMIN_TOKEN
 ```
 
-Discarding the client token is the only local logout action in this version. There is no logout
-endpoint promising server-side invalidation. Tokens are accepted only from the Authorization
-header, not query strings, cookies, or form parameters.
+### Logout and stateless authentication
+
+V1 deliberately has **no server-side logout/revocation endpoint**. To log out, the client removes
+its access token from memory and stops attaching it to requests:
+
+```bash
+unset ACCESS_TOKEN ADMIN_TOKEN
+```
+
+That logs this client out locally. It does not invalidate a token already copied elsewhere:
+that copy remains accepted until expiry, provided its signing key remains accepted. The default
+lifetime is 15 minutes, with a 30-second clock-skew allowance in timestamp validation.
+Changing a user's password, roles, or enabled status also does not immediately revoke existing JWTs.
+The `jti` claim is a unique identifier; this template does not store it as a revocation record.
+
+An endpoint returning "logged out" alone cannot make a self-contained JWT invalid. Immediate
+revocation would require token/session state and request-time checks, which are outside this
+stateless v1. Applications that need that behavior must add and test an explicit revocation design.
+
+Tokens are accepted only from the Authorization header, not query strings, cookies, or form parameters.
 
 ## How the code fits together
 
@@ -173,8 +233,8 @@ provider can replace the loader without changing the authentication flow.
 | `JWT_AUDIENCE` | `security-foundation-api` | Required API audience |
 | `JWT_LIFETIME` | `15m` | Access-token lifetime; 1–60 minutes |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated explicit origins, without trailing slash/path |
-| `DEMO_USER_PASSWORD` | None | Set explicitly for demo; obey DemoProperties password limits |
-| `DEMO_ADMIN_PASSWORD` | None | Set explicitly for demo; obey DemoProperties password limits |
+| `DEMO_USER_PASSWORD` | `12345` (demo only) | Override locally; 5–72 UTF-8 bytes |
+| `DEMO_ADMIN_PASSWORD` | `12345` (demo only) | Override locally; 5–72 UTF-8 bytes |
 
 Use `file:/absolute/path/private.pem` and `file:/absolute/path/public.pem` in deployments.
 Outside demo, key resources must be local files, at least 2048 bits, and match. No classpath/HTTP key locations
@@ -246,7 +306,8 @@ application database. The default build needs no database. To build an executabl
 java -jar target/security-foundation-0.1.0-SNAPSHOT.jar --spring.profiles.active=demo
 ```
 
-The demo JAR requires the same demo environment variables and generates its keys in memory.
+The demo JAR uses the same demo password settings (overrides or local defaults) and generates
+its keys in memory.
 
 ## Deployment boundaries and maintenance
 
@@ -265,5 +326,14 @@ services. A valid JWT does not establish access to every user's data.
 See [CONTRIBUTING](CONTRIBUTING.md) and [SECURITY](SECURITY.md). Users who copy the code must
 review and apply later fixes themselves. This repository does not automatically update copies.
 
-Publication is pending: the maintainer must choose branding, a license, and a private security
-reporting contact. No open-source license is asserted until that choice is recorded.
+## License
+
+Licensed under the [MIT License](LICENSE), copyright 2026 Masum Hasan. You may use, modify,
+and redistribute this code, including commercially, subject to preserving the license notice.
+The software is provided without warranty; see the full license text.
+
+## Security reporting
+
+Use GitHub private vulnerability reporting once it is enabled on the published repository.
+See [SECURITY.md](SECURITY.md) for the reporting flow and maintainer activation instructions.
+Do not assume the feature is already enabled merely because this file exists.

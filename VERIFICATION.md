@@ -52,7 +52,8 @@ The CI configuration is present; its commands were verified locally on both JDKs
 are not a live browser test. No existing ERP database or production service was contacted.
 
 Boot releases other than 3.5.16 and JDKs other than the two listed above are unverified.
-Private vulnerability reporting, project branding, and license remain publication prerequisites.
+The repository name is now selected and an MIT license has been added. GitHub private vulnerability
+reporting must still be enabled on the published repository by its maintainer.
 
 ## Postman collection verification
 

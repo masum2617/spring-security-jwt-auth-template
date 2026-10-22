@@ -11,10 +11,26 @@ until expiry. Resource/tenant authorization belongs to the consuming application
 
 ## Reporting
 
-A private vulnerability-reporting contact has not yet been configured. **Publication is blocked
-until the maintainer adds a working private contact or enables private GitHub vulnerability reporting.**
-Do not publish exploit details or real credentials in a public issue while arranging disclosure.
-No contact address or reporting service is implied by this template.
+This project uses **GitHub private vulnerability reporting** for sensitive reports after the
+maintainer enables it on the published repository.
+
+For reporters, open the repository's **Security → Advisories → Report a vulnerability**, then
+submit the affected version, reproduction, impact, and a proposed mitigation privately. Omit
+real passwords, private keys, and production tokens. Do not open a public issue with exploit details.
+
+If the private-report button is unavailable, reporting has not yet been enabled or is unavailable
+for that repository. This template does not configure or activate the GitHub feature itself.
+Use an existing private maintainer contact if one is provided; do not assume an unpublished email.
+
+For the maintainer, after creating the public GitHub repository:
+
+1. Open **Settings → Security → Advanced Security** (the security-settings label may vary).
+2. Enable **Private vulnerability reporting**.
+3. Verify that **Report a vulnerability** appears under Security → Advisories.
+
+Follow [GitHub's configuration instructions](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository).
+This repository has not been connected to a GitHub remote during this task, so activation remains
+a GitHub setup step rather than a claim of a working reporting channel.
 
 ## Applying fixes to copies
 

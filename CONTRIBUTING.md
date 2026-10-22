@@ -21,4 +21,5 @@ checks the Java sources in the optional example too. Comments explain why, secur
 and where to customize; avoid comments for obvious assignments and unnecessary abstractions.
 
 Report what was actually verified. Unit/MockMvc success is not browser, database, or deployment
-proof. Publication requires a maintainer-selected license, name, and private reporting route.
+proof. The project is licensed under MIT; preserve the license notice when redistributing copies.
+Use the private reporting process in SECURITY.md for sensitive vulnerabilities.
