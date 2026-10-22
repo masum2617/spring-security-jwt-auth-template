@@ -1,5 +1,7 @@
 # spring-security-jwt-auth-template
 
+[Use this template](https://github.com/masum2617/spring-security-jwt-auth-template/generate)
+
 An editable REST authentication foundation: run the demo, understand the Spring Security flow,
 then replace its user lookup with your own database. This is source you own and customize,
 not a library that requires your tables to follow a particular schema.
@@ -32,6 +34,45 @@ Older Boot 3.x versions and Boot 4 are not verified. Compiling for Java 17 does 
 compatibility with every framework release. Framework/vendor support lifecycle and this project's
 compatibility tests are separate: check [Spring's support policy](https://spring.io/projects/spring-boot#support)
 and update the pinned patch when maintaining a deployment.
+
+## Create your project from this template
+
+### Start a new application
+
+1. Open [Use this template](https://github.com/masum2617/spring-security-jwt-auth-template/generate)
+   or select **Use this template → Create a new repository** on this repository's GitHub page.
+2. Choose your account, a project name, and public/private visibility, then create the repository.
+3. Clone **your newly created repository**, replacing the placeholders below with your own values:
+
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/YOUR-PROJECT.git
+   cd YOUR-PROJECT
+   ```
+
+4. Follow [Quick start](#quick-start) or [Run in IntelliJ IDEA](#run-in-intellij-idea).
+   The demo starts without a database or signing-key files.
+5. Customize the Maven group/artifact/name, `spring.application.name`, and Java package names for
+   your application. Creating a GitHub repository does not rename these values automatically.
+   If you change the Maven artifact ID, adjust the packaged JAR filename in commands accordingly.
+6. Connect your user lookup using the [database integration guide](docs/database-integration.md).
+   Before running outside demo, supply persistent keys and replace demo-only behavior with your
+   application endpoints and access rules. Configure the JWT issuer/audience for your application.
+
+### Add authentication to an existing application
+
+Follow [Copy into an existing project](docs/copy-into-existing-project.md) to copy the required
+sources/dependencies and merge your current security configuration. You do not need to create a
+new repository to use the authentication foundation in an existing application.
+
+### Updates, contributions, and license
+
+A repository generated from this template is an independent project with fresh Git history.
+Later changes to this template do not automatically update your project. Review upstream fixes
+and apply/test the relevant changes in your copy, especially security fixes.
+
+To contribute improvements to this template itself, fork the source repository and open a pull
+request, following [CONTRIBUTING.md](CONTRIBUTING.md). Preserve the [MIT license notice](LICENSE)
+when redistributing the template code.
 
 ## Quick start
 

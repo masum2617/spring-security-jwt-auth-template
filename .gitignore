@@ -9,3 +9,6 @@
 # Local Postman exports/reports may contain developer credentials.
 /postman/*.private.postman_environment.json
 /postman-cli-reports/
+
+#files
+IMPLEMENTATION_PLAN.md
