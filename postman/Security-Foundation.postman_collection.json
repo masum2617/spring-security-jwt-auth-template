@@ -1,0 +1,757 @@
+{
+  "info": {
+    "name": "Spring Boot Security Foundation - API Tests",
+    "description": "Run against the local demo profile. Import the companion Local environment, enter your demo passwords locally, and run all folders in order. USER/ADMIN JWTs stay in run-local variables. Negative cases deliberately expect 400, 401, or 403. Database-mode business routes are application-specific and are not covered by this demo collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "userAccessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminAccessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - USER flow",
+      "description": "Run first. Tokens are captured only in collection-run local variables.",
+      "item": [
+        {
+          "name": "01 - Login as USER",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Loads userEmail/userPassword from the selected environment. Never stores the returned JWT in the environment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{loginBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = pm.variables.get(\"userEmail\");",
+                  "const password = pm.variables.get(\"userPassword\");",
+                  "if (!email || !password) {",
+                  "    throw new Error(\"Set userEmail and userPassword in the selected local environment first.\");",
+                  "}",
+                  "pm.variables.unset(\"userAccessToken\");",
+                  "pm.variables.set(\"loginBody\", JSON.stringify({email: email, password: password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Access token response follows the login contract\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a(\"string\");",
+                  "    pm.expect(body.accessToken.split(\".\").length).to.eql(3);",
+                  "    pm.expect(body.tokenType).to.eql(\"Bearer\");",
+                  "    pm.expect(body.expiresInSeconds).to.be.within(60, 3600);",
+                  "    pm.expect(body).not.to.have.property(\"password\");",
+                  "    pm.expect(body).not.to.have.property(\"refreshToken\");",
+                  "});",
+                  "pm.test(\"Login response is not cached and creates no cookie\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\");",
+                  "    pm.expect(pm.response.headers.has(\"Set-Cookie\")).to.eql(false);",
+                  "});",
+                  "// Local variables survive the collection run, not a shared environment export.",
+                  "if (pm.response.code === 200) {",
+                  "    const token = pm.response.json().accessToken;",
+                  "    if (typeof token === \"string\" && token.split(\".\").length === 3) {",
+                  "        pm.variables.set(\"userAccessToken\", token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - USER can read profile",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demo/profile",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"userAccessToken\")) {",
+                  "    throw new Error(\"Run the collection from login first; JWTs are kept only for this run.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Identity and authorities match the demo account\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.userId).to.eql(\"demo-user\");",
+                  "    pm.expect(body.authorities).to.include(\"ROLE_USER\");",
+                  "    pm.expect(body).not.to.have.property(\"password\");",
+                  "    pm.expect(body).not.to.have.property(\"accessToken\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - USER cannot access admin",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demo/admin",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"userAccessToken\")) {",
+                  "    throw new Error(\"Run the collection from login first; JWTs are kept only for this run.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Problem Details response\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(403);",
+                  "    pm.expect(body.detail).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Bearer challenge is preserved\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"WWW-Authenticate\")).to.include(\"Bearer\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - ADMIN flow",
+      "item": [
+        {
+          "name": "04 - Login as ADMIN",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{{loginBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = pm.variables.get(\"adminEmail\");",
+                  "const password = pm.variables.get(\"adminPassword\");",
+                  "if (!email || !password) {",
+                  "    throw new Error(\"Set adminEmail and adminPassword in the selected local environment first.\");",
+                  "}",
+                  "pm.variables.unset(\"adminAccessToken\");",
+                  "pm.variables.set(\"loginBody\", JSON.stringify({email: email, password: password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Access token response follows the login contract\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a(\"string\");",
+                  "    pm.expect(body.accessToken.split(\".\").length).to.eql(3);",
+                  "    pm.expect(body.tokenType).to.eql(\"Bearer\");",
+                  "    pm.expect(body.expiresInSeconds).to.be.within(60, 3600);",
+                  "    pm.expect(body).not.to.have.property(\"password\");",
+                  "    pm.expect(body).not.to.have.property(\"refreshToken\");",
+                  "});",
+                  "pm.test(\"Login response is not cached and creates no cookie\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\");",
+                  "    pm.expect(pm.response.headers.has(\"Set-Cookie\")).to.eql(false);",
+                  "});",
+                  "// Local variables survive the collection run, not a shared environment export.",
+                  "if (pm.response.code === 200) {",
+                  "    const token = pm.response.json().accessToken;",
+                  "    if (typeof token === \"string\" && token.split(\".\").length === 3) {",
+                  "        pm.variables.set(\"adminAccessToken\", token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 - ADMIN can read profile",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demo/profile",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"adminAccessToken\")) {",
+                  "    throw new Error(\"Run the collection from login first; JWTs are kept only for this run.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Identity and authorities match the demo account\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.userId).to.eql(\"demo-admin\");",
+                  "    pm.expect(body.authorities).to.include(\"ROLE_ADMIN\");",
+                  "    pm.expect(body).not.to.have.property(\"password\");",
+                  "    pm.expect(body).not.to.have.property(\"accessToken\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 - ADMIN can access admin",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demo/admin",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"adminAccessToken\")) {",
+                  "    throw new Error(\"Run the collection from login first; JWTs are kept only for this run.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Admin endpoint grants access\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"Admin access granted\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Authentication failures",
+      "item": [
+        {
+          "name": "07 - Missing token returns 401",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/demo/profile",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Problem Details response\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(401);",
+                  "    pm.expect(body.detail).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Bearer challenge is preserved\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"WWW-Authenticate\")).to.include(\"Bearer\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 - Invalid token returns 401",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid-token",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demo/profile",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Problem Details response\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(401);",
+                  "    pm.expect(body.detail).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Bearer challenge is preserved\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"WWW-Authenticate\")).to.include(\"Bearer\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 - Incorrect password returns 401",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{{negativeLoginBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = pm.variables.get(\"userEmail\");",
+                  "const correct = pm.variables.get(\"userPassword\");",
+                  "if (!email || !correct) { throw new Error(\"Set user credentials in the selected environment.\"); }",
+                  "const wrong = correct === \"intentionally-wrong-password\" ? \"another-wrong-password\" : \"intentionally-wrong-password\";",
+                  "pm.variables.set(\"negativeLoginBody\", JSON.stringify({email: email, password: wrong}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Problem Details response\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(401);",
+                  "    pm.expect(body.detail).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Login failure is generic\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.eql(\"Incorrect email or password\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 - Unknown account returns 401",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"not-a-demo-user@example.com\",\n  \"password\": \"intentionally-wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Problem Details response\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(401);",
+                  "    pm.expect(body.detail).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Unknown account uses the same generic failure\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.eql(\"Incorrect email or password\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 - Invalid login payload returns 400",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"not-an-email\",\n  \"password\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Problem Details response\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(400);",
+                  "    pm.expect(body.detail).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - Client role injection returns 400",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "The login contract rejects unknown properties rather than accepting client roles.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{injectedLoginBody}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = pm.variables.get(\"userEmail\");",
+                  "const password = pm.variables.get(\"userPassword\");",
+                  "if (!email || !password) {",
+                  "    throw new Error(\"Set userEmail and userPassword in the selected local environment first.\");",
+                  "}",
+                  "pm.variables.unset(\"userAccessToken\");",
+                  "pm.variables.set(\"loginBody\", JSON.stringify({email: email, password: password}));",
+                  "pm.variables.set(\"injectedLoginBody\", JSON.stringify({",
+                  "    email: pm.variables.get(\"userEmail\"), password: pm.variables.get(\"userPassword\"), roles: [\"ADMIN\"]",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Problem Details response\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(400);",
+                  "    pm.expect(body.detail).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - CORS preflight",
+      "description": "Checks response policy over HTTP; this does not emulate enforcement by a real browser.",
+      "item": [
+        {
+          "name": "13 - Allowed frontend preflight",
+          "request": {
+            "method": "OPTIONS",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{allowedOrigin}}",
+                "type": "text"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET",
+                "type": "text"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Authorization",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demo/profile",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Explicit origin and Authorization header are allowed\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Access-Control-Allow-Origin\")).to.eql(pm.variables.get(\"allowedOrigin\"));",
+                  "    pm.expect(pm.response.headers.get(\"Access-Control-Allow-Headers\").toLowerCase()).to.include(\"authorization\");",
+                  "    pm.expect(pm.response.headers.has(\"Access-Control-Allow-Credentials\")).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 - Untrusted frontend preflight",
+          "request": {
+            "method": "OPTIONS",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{forbiddenOrigin}}",
+                "type": "text"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET",
+                "type": "text"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Authorization",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demo/profile",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Untrusted origin is not granted CORS access\", function () {",
+                  "    pm.expect(pm.response.headers.has(\"Access-Control-Allow-Origin\")).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

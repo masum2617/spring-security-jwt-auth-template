@@ -1,0 +1,5 @@
+# Demo accounts exist only when the demo profile is explicitly selected.
+app:
+  demo:
+    user-password: ${DEMO_USER_PASSWORD:12345}
+    admin-password: ${DEMO_ADMIN_PASSWORD:12345}

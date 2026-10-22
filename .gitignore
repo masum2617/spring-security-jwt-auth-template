@@ -1,0 +1,11 @@
+**/target/
+/.keys/
+/.env
+*.log
+.idea/
+*.iml
+.DS_Store
+
+# Local Postman exports/reports may contain developer credentials.
+/postman/*.private.postman_environment.json
+/postman-cli-reports/
